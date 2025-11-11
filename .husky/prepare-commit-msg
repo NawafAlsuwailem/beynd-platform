@@ -2,3 +2,4 @@
 
 # Interactive Commitizen prompt (Husky v9+ safe)
 exec < /dev/tty && npx cz --hook || true
+exit 0
