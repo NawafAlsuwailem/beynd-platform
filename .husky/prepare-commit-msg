@@ -1,7 +1,15 @@
 #!/bin/sh
-# Run Commitizen interactively before Git opens the editor
-if [ -t 0 ]; then
-  exec < /dev/tty && npx cz --hook || true
-  # Stop Git from reopening the commit editor
-  exit 0
+# Force Commitizen interactive prompt before Git opens editor
+
+# Only trigger if commit message is empty (i.e., not amend, merge, or -m)
+if [ -z "$2" ]; then
+  exec < /dev/tty
+  MESSAGE=$(npx cz --hook || true)
+
+  # If Commitizen produced a message, use it directly
+  if [ -n "$MESSAGE" ]; then
+    # Abort current commit so we can re-invoke it cleanly
+    git commit -m "$MESSAGE" --no-verify
+    exit 1
+  fi
 fi
