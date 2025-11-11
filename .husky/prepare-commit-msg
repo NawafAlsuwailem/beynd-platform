@@ -1,16 +1,14 @@
 #!/bin/sh
-# Force Commitizen interactive prompt before Git opens editor
+# Interactive Commitizen (Husky v9+ safe)
 
-# Only trigger if commit message is empty (i.e., not amend, merge, or -m)
+# Only trigger for normal commits (no -m, no merge)
 if [ -z "$2" ]; then
   exec < /dev/tty
-  MESSAGE=$(npx cz --hook || true)
+  npx cz --hook || true
 
-  # If Commitizen produced a message, use it directly
-  if [ -n "$MESSAGE" ]; then
-    # Abort current commit so we can re-invoke it cleanly
-    git commit -m "$MESSAGE" --no-verify
-    exit 1
+  # If Commitizen filled the message file, stop Git from opening editor
+  if [ -s "$1" ]; then
+    exit 0
   fi
 fi
-# wow
+# test
