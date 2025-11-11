@@ -1,14 +1,14 @@
 #!/bin/sh
-# Interactive Commitizen (Husky v9+ safe)
+# Commitizen + Husky hook — skip editor completely
 
-# Only trigger for normal commits (no -m, no merge)
+# Only run when commit message is empty (normal commits, not amend or merge)
 if [ -z "$2" ]; then
   exec < /dev/tty
   npx cz --hook || true
 
-  # If Commitizen filled the message file, stop Git from opening editor
+  # If Commitizen wrote a message, finish the commit and abort default editor
   if [ -s "$1" ]; then
-    exit 0
+    git commit -F "$1" --no-verify
+    exit 1
   fi
 fi
-# test
