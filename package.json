@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "@beynd/commitizen-config": "^1.2.6"
+    "@beynd/commitizen-config": "^1.2.7"
   },
   "config": {
     "commitizen": {

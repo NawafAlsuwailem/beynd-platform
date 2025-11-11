@@ -1,7 +1,5 @@
 #!/bin/sh
-# Commitizen + Husky hook — skip editor completely
-
-# Only run when commit message is empty (normal commits, not amend or merge)
+# Run Commitizen interactively before Git opens the editor
 if [ -z "$2" ]; then
   exec < /dev/tty
   npx cz --hook || true
