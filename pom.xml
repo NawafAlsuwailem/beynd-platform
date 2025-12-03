@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>beynd.architecture</groupId>
+        <groupId>com.beynd</groupId>
         <artifactId>beynd-spring-parent</artifactId>
         <version>3.0.0</version>
         <relativePath/>
@@ -18,7 +18,7 @@
     <description>Shared architecture platform library for Beynd microservices</description>
 
     <properties>
-        <revision>4.3.0-SNAPSHOT</revision>
+        <revision>5.5.0-SNAPSHOT</revision>
         <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
     </properties>
 
@@ -45,6 +45,28 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
+
+        <!-- DB support -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Kafka support -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>7.8.0</version>
         </dependency>
     </dependencies>
 

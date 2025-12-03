@@ -1,0 +1,3 @@
+com.beynd.platform.jpa.PlatformJpaConfig
+com.beynd.platform.messaging.config.BeyndMessagingAutoConfiguration
+
