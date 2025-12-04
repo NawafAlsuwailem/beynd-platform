@@ -15,5 +15,4 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EntityScan(
         basePackageClasses = com.beynd.platform.messaging.outbox.OutboxEvent.class
 )
-public class PlatformJpaConfig {
-}
+public class PlatformJpaConfig {}

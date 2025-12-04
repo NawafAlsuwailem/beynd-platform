@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static com.beynd.platform.messaging.outbox.EventDispatchStatus.PENDING;
+
 @Slf4j
 @RequiredArgsConstructor
 public class DefaultEventPublisher implements EventPublisher {
@@ -18,7 +20,7 @@ public class DefaultEventPublisher implements EventPublisher {
 
     @Override
     @Transactional
-    public void publish(String topic, Object event) {
+    public void publish(String partitionKey, String topic, Object event) {
         if (event == null) {
             throw new IllegalArgumentException("[BEYND KAFKA] Event payload must not be null");
         }
@@ -29,14 +31,14 @@ public class DefaultEventPublisher implements EventPublisher {
 
         OutboxEvent outbox = OutboxEvent.builder()
                 .id(UUID.randomUUID())
-                .aggregateType(null)      // can be filled later if you introduce a DomainEvent interface
+                .aggregateType(null)
                 .aggregateId(null)
                 .eventType(eventType)
                 .payload(payload)
                 .headers(null)
                 .topic(topic)
-                .partitionKey(null)
-                .status("PENDING")
+                .partitionKey(partitionKey)
+                .status(PENDING)
                 .attemptCount(0)
                 .build();
 

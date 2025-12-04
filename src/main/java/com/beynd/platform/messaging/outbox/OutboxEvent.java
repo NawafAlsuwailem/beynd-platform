@@ -40,8 +40,9 @@ public class OutboxEvent {
     @Column(name = "partition_key")
     private String partitionKey;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private String status;
+    private EventDispatchStatus status;
 
     @Column(name = "attempt_count", nullable = false)
     private Integer attemptCount;
