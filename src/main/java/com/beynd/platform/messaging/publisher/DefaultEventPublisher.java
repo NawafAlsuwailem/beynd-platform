@@ -20,7 +20,7 @@ public class DefaultEventPublisher implements EventPublisher {
 
     @Override
     @Transactional
-    public void publish(String partitionKey, String topic, Object event) {
+    public void dispatch(String partitionKey, String topic, Object event) {
         if (event == null) {
             throw new IllegalArgumentException("[BEYND KAFKA] Event payload must not be null");
         }
