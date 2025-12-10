@@ -1,4 +1,4 @@
-package com.beynd.platform.messaging.outbox;
+package com.beynd.platform.messaging.kafka.producer.outbox;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

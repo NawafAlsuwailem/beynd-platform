@@ -1,6 +1,6 @@
-package com.beynd.platform.messaging.publisher;
+package com.beynd.platform.messaging.kafka.producer.publisher;
 
-public interface EventPublisher {
+public interface BeyndEventPublisher {
 
     /**
      * Publish a domain event to a Kafka topic via the Outbox pattern.
@@ -9,5 +9,5 @@ public interface EventPublisher {
      * @param topic the Kafka topic name
      * @param event the event payload (Avro-generated class, DTO, etc.)
      */
-    void dispatch(String partitionKey, String topic, Object event);
+    void fire(String aggregateType, String aggregateId, String headers, String partitionKey, String topic, Object event);
 }

@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.beynd</groupId>
         <artifactId>beynd-spring-parent</artifactId>
-        <version>3.0.0</version>
+        <version>3.0.1</version>
         <relativePath/>
     </parent>
 
@@ -18,7 +18,7 @@
     <description>Shared architecture platform library for Beynd microservices</description>
 
     <properties>
-        <revision>5.5.0-SNAPSHOT</revision>
+        <revision>5.8.0-SNAPSHOT</revision>
         <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
     </properties>
 

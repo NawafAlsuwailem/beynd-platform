@@ -1,3 +1,2 @@
-com.beynd.platform.jpa.PlatformJpaConfig
-com.beynd.platform.messaging.config.BeyndMessagingAutoConfiguration
-
+com.beynd.platform.messaging.kafka.producer.config.ProducerAutoConfiguration
+com.beynd.platform.messaging.kafka.consumer.config.ConsumerAutoConfiguration

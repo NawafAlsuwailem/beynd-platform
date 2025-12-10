@@ -1,6 +1,6 @@
-package com.beynd.platform.messaging.startup.validation;
+package com.beynd.platform.messaging.kafka.common.startup.validation;
 
-import com.beynd.platform.messaging.config.BeyndKafkaProperties;
+import com.beynd.platform.messaging.kafka.common.config.KafkaProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -16,9 +16,9 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RequiredArgsConstructor
-public class DefaultKafkaStartupValidator implements BeyndKafkaStartupValidator {
+public class DefaultKafkaStartupValidator implements KafkaStartupValidator {
 
-    private final BeyndKafkaProperties properties;
+    private final KafkaProperties properties;
     private final DataSource dataSource;
 
     @Override
@@ -26,6 +26,7 @@ public class DefaultKafkaStartupValidator implements BeyndKafkaStartupValidator 
         log.info("[BEYND KAFKA] Kafka is enabled. Validation phase starting (Phase 1 placeholder)...");
         validateBootstrapServers();
         validateSchemaRegistry();
+        validateAggregationType();
         validateDatabaseTables();
         validateKafkaClusterConnection();
     }
@@ -48,8 +49,7 @@ public class DefaultKafkaStartupValidator implements BeyndKafkaStartupValidator 
         String url = properties.getSchemaRegistryUrl();
 
         if (url == null || url.isBlank()) {
-            log.warn("[BEYND KAFKA] Schema Registry URL not provided — skipping validation.");
-            return;
+            throw new IllegalStateException("[BEYND KAFKA] Schema Registry URL not provided — skipping validation.");
         }
 
         // simple URL validation
@@ -58,6 +58,16 @@ public class DefaultKafkaStartupValidator implements BeyndKafkaStartupValidator 
         }
 
         log.info("[BEYND KAFKA] ✔ Schema Registry configured: {}", url);
+    }
+
+    private void validateAggregationType() {
+        String aggregationType = properties.getProducer().getAggregationType();
+
+        if (aggregationType == null || aggregationType.isBlank()) {
+            throw new IllegalStateException("[BEYND KAFKA] Aggregation Type not provided — skipping validation.");
+        }
+
+        log.info("[BEYND KAFKA] ✔ Aggregation Type configured: {}", aggregationType);
     }
 
     private void validateDatabaseTables() {

@@ -1,26 +1,26 @@
-package com.beynd.platform.messaging.publisher;
+package com.beynd.platform.messaging.kafka.producer.publisher;
 
-import com.beynd.platform.messaging.outbox.OutboxEvent;
-import com.beynd.platform.messaging.outbox.OutboxEventRepository;
-import com.beynd.platform.messaging.serializer.EventPayloadSerializer;
+import com.beynd.platform.messaging.kafka.producer.outbox.OutboxEvent;
+import com.beynd.platform.messaging.kafka.producer.outbox.OutboxEventRepository;
+import com.beynd.platform.messaging.kafka.common.serializer.EventPayloadSerializer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-import static com.beynd.platform.messaging.outbox.EventDispatchStatus.PENDING;
+import static com.beynd.platform.messaging.kafka.producer.outbox.EventDispatchStatus.PENDING;
 
 @Slf4j
 @RequiredArgsConstructor
-public class DefaultEventPublisher implements EventPublisher {
+public class DefaultBeyndEventPublisher implements BeyndEventPublisher {
 
     private final OutboxEventRepository outboxEventRepository;
     private final EventPayloadSerializer serializer;
 
     @Override
     @Transactional
-    public void dispatch(String partitionKey, String topic, Object event) {
+    public void fire(String aggregateType, String aggregateId, String headers, String partitionKey, String topic, Object event) {
         if (event == null) {
             throw new IllegalArgumentException("[BEYND KAFKA] Event payload must not be null");
         }
@@ -31,11 +31,11 @@ public class DefaultEventPublisher implements EventPublisher {
 
         OutboxEvent outbox = OutboxEvent.builder()
                 .id(UUID.randomUUID())
-                .aggregateType(null)
-                .aggregateId(null)
+                .aggregateType(aggregateType)
+                .aggregateId(aggregateId)
                 .eventType(eventType)
                 .payload(payload)
-                .headers(null)
+                .headers(headers)
                 .topic(topic)
                 .partitionKey(partitionKey)
                 .status(PENDING)

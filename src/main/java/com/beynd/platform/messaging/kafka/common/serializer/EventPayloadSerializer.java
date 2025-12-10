@@ -1,4 +1,4 @@
-package com.beynd.platform.messaging.serializer;
+package com.beynd.platform.messaging.kafka.common.serializer;
 
 
 public interface EventPayloadSerializer {

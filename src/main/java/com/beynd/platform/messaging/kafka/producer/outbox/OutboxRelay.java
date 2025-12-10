@@ -1,4 +1,4 @@
-package com.beynd.platform.messaging.outbox;
+package com.beynd.platform.messaging.kafka.producer.outbox;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 
-import static com.beynd.platform.messaging.outbox.EventDispatchStatus.*;
+import static com.beynd.platform.messaging.kafka.producer.outbox.EventDispatchStatus.*;
 
 @Slf4j
 @RequiredArgsConstructor
