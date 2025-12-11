@@ -96,10 +96,10 @@ public class DeadLetterRecoverer extends DeadLetterPublishingRecoverer {
 
         KafkaProperties.Consumer props = properties.getConsumer();
 
-        int retry = getRetryCount(record);
+        int retry = 3;
         boolean willRetry = retry < props.getRetryMaxAttempts();
 
-        headers.remove(RETRY_COUNT_HEADER);
+        headers.remove("");
 
         if (willRetry) {
             headers.add(RETRY_COUNT_HEADER, Integer.toString(retry + 1).getBytes(StandardCharsets.UTF_8));
