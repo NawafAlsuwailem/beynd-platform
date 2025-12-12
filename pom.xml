@@ -18,7 +18,7 @@
     <description>Shared architecture platform library for Beynd microservices</description>
 
     <properties>
-        <revision>5.39.0-SNAPSHOT</revision>
+        <revision>5.40.0-SNAPSHOT</revision>
         <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
     </properties>
 
