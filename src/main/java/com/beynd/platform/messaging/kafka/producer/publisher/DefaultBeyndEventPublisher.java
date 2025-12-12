@@ -1,8 +1,8 @@
 package com.beynd.platform.messaging.kafka.producer.publisher;
 
+import com.beynd.platform.messaging.kafka.common.serializer.EventPayloadSerializer;
 import com.beynd.platform.messaging.kafka.producer.outbox.OutboxEvent;
 import com.beynd.platform.messaging.kafka.producer.outbox.OutboxEventRepository;
-import com.beynd.platform.messaging.kafka.common.serializer.EventPayloadSerializer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,14 +13,15 @@ import static com.beynd.platform.messaging.kafka.producer.outbox.EventDispatchSt
 
 @Slf4j
 @RequiredArgsConstructor
-public class DefaultBeyndEventPublisher implements BeyndEventPublisher {
+public class DefaultBeyndEventPublisher implements EventPublisher {
 
     private final OutboxEventRepository outboxEventRepository;
     private final EventPayloadSerializer serializer;
 
     @Override
     @Transactional
-    public void fire(String aggregateType, String aggregateId, String headers, String partitionKey, String topic, Object event) {
+    public void fire(String aggregateType, String aggregateId, String headers, String partitionKey, String topic,
+            Object event) {
         if (event == null) {
             throw new IllegalArgumentException("[BEYND KAFKA] Event payload must not be null");
         }
@@ -28,9 +29,10 @@ public class DefaultBeyndEventPublisher implements BeyndEventPublisher {
         byte[] payload = serializer.serialize(topic, event);
 
         String eventType = event.getClass().getSimpleName();
+        UUID eventId = UUID.randomUUID();
 
         OutboxEvent outbox = OutboxEvent.builder()
-                .id(UUID.randomUUID())
+                .id(eventId)
                 .aggregateType(aggregateType)
                 .aggregateId(aggregateId)
                 .eventType(eventType)

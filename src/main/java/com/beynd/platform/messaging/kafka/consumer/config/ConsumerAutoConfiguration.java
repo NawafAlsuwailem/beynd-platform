@@ -1,23 +1,24 @@
 package com.beynd.platform.messaging.kafka.consumer.config;
 
 import com.beynd.platform.messaging.kafka.common.config.KafkaProperties;
-import com.beynd.platform.messaging.kafka.consumer.recovery.DeadLetterRecoverer;
+import com.beynd.platform.messaging.kafka.common.serializer.EventPayloadSerializer;
 import com.beynd.platform.messaging.kafka.consumer.idempotency.IdempotentRecordInterceptor;
-import com.beynd.platform.messaging.kafka.consumer.idempotency.ProcessedEventRepository;
+import com.beynd.platform.messaging.kafka.consumer.recovery.DeadLetterRecoverer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.*;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
@@ -26,80 +27,97 @@ import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(KafkaProperties.class)
-@ConditionalOnClass({KafkaTemplate.class, ConcurrentKafkaListenerContainerFactory.class})
-@ConditionalOnProperty(prefix = "beynd.kafka", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "beynd.kafka.consumer", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class ConsumerAutoConfiguration {
 
-    public static final String BEYND_LISTENER_CONTAINER_FACTORY_BEAN_NAME =
-            "beyndKafkaListenerContainerFactory";
-    public static final String BEYND_CONSUMER_FACTORY_BEAN_NAME =
-            "beyndConsumerFactory";
+    public static final String LISTENER_FACTORY = "beyndKafkaListenerContainerFactory";
+
     private final KafkaProperties properties;
     private final Environment environment;
 
     @Bean
-    @ConditionalOnMissingBean(name = BEYND_CONSUMER_FACTORY_BEAN_NAME)
-    public ConsumerFactory<Object, Object> beyndConsumerFactory() {
-        Map<String, Object> config = new HashMap<>();
-        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, properties.getBootstrapServers());
-        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
-        config.put("schema.registry.url", properties.getSchemaRegistryUrl());
-        config.put("specific.avro.reader", true);
+    public ConsumerFactory<String, Object> consumerFactory() {
+        Map<String, Object> cfg = new HashMap<>();
+        cfg.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, properties.getBootstrapServers());
+        cfg.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        cfg.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
+        cfg.put("schema.registry.url", properties.getSchemaRegistryUrl());
+        cfg.put("specific.avro.reader", true);
 
-        String groupId = properties.getConsumer().getGroupId();
-        if (groupId == null || groupId.isBlank()) {
-            groupId = environment.getProperty("spring.application.name", "beynd-app");
-        }
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        cfg.put(ConsumerConfig.GROUP_ID_CONFIG,
+                properties.getConsumer().getGroupId() != null
+                        ? properties.getConsumer().getGroupId()
+                        : environment.getProperty("spring.application.name"));
 
-        return new DefaultKafkaConsumerFactory<>(config);
+        cfg.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        cfg.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        return new DefaultKafkaConsumerFactory<>(cfg);
     }
 
     @Bean
-    @ConditionalOnMissingBean
-    public DeadLetterRecoverer beyndDeadLetterRecoverer(
-            KafkaTemplate<String, byte[]> producerKafkaTemplate
-    ) {
-        return new DeadLetterRecoverer(producerKafkaTemplate, properties);
+    public CommonErrorHandler errorHandler(
+            KafkaTemplate<String, byte[]> template,
+            EventPayloadSerializer serializer) {
+
+        KafkaProperties.Consumer c = properties.getConsumer();
+
+        ExponentialBackOffWithMaxRetries backoff =
+                new ExponentialBackOffWithMaxRetries(c.getMaxRetries());
+
+        backoff.setInitialInterval(c.getBackoffInitialIntervalMs());
+        backoff.setMultiplier(c.getBackoffMultiplier());
+        backoff.setMaxInterval(c.getBackoffMaxIntervalMs());
+
+        DefaultErrorHandler handler =
+                new DefaultErrorHandler(
+                        new DeadLetterRecoverer(template, properties, serializer),
+                        backoff
+                );
+
+        handler.setRetryListeners((record, ex, deliveryAttempt) -> {
+            if (ex != null) {
+                log.error(
+                        "[Kafka Consume Failure] topic={} partition={} offset={} key={} attempt={}",
+                        record.topic(),
+                        record.partition(),
+                        record.offset(),
+                        record.key(),
+                        deliveryAttempt,
+                        ex
+                );
+            }
+        });
+
+        handler.setAckAfterHandle(true);     // commit after recovery
+        handler.setCommitRecovered(true);    // commit offsets
+        handler.setSeekAfterError(false);    // NEVER seek on failure
+
+        return handler;
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public CommonErrorHandler beyndErrorHandler(DeadLetterRecoverer recoverer) {
-        var consumerProps = properties.getConsumer();
 
-        ExponentialBackOffWithMaxRetries backOff =
-                new ExponentialBackOffWithMaxRetries(consumerProps.getMaxRetries());
+    @Bean(name = LISTENER_FACTORY)
+    public ConcurrentKafkaListenerContainerFactory<String, Object>
+    kafkaListenerContainerFactory(ConsumerFactory<String, Object> cf,
+                                  CommonErrorHandler errorHandler,
+                                  ObjectProvider<IdempotentRecordInterceptor> interceptor) {
 
-        backOff.setInitialInterval(consumerProps.getBackoffInitialIntervalMs());
-        backOff.setMultiplier(consumerProps.getBackoffMultiplier());
-        backOff.setMaxInterval(consumerProps.getBackoffMaxIntervalMs());
+        ConcurrentKafkaListenerContainerFactory<String, Object> f =
+                new ConcurrentKafkaListenerContainerFactory<>();
 
-        return new DefaultErrorHandler(recoverer, backOff);
-    }
+        f.setConsumerFactory(cf);
+        f.setCommonErrorHandler(errorHandler);
+        f.setConcurrency(properties.getConsumer().getConcurrency());
+        f.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
 
-    @Bean(name = BEYND_LISTENER_CONTAINER_FACTORY_BEAN_NAME)
-    @ConditionalOnMissingBean(name = BEYND_LISTENER_CONTAINER_FACTORY_BEAN_NAME)
-    public ConcurrentKafkaListenerContainerFactory<Object, Object> beyndKafkaListenerContainerFactory(
-            ConsumerFactory<Object, Object> beyndConsumerFactory,
-            CommonErrorHandler errorHandler,
-            ObjectProvider<ProcessedEventRepository> processedEventRepositoryProvider
-    ) {
-        var factory = new ConcurrentKafkaListenerContainerFactory<Object, Object>();
-        factory.setConsumerFactory(beyndConsumerFactory);
-        factory.setCommonErrorHandler(errorHandler);
-        factory.setConcurrency(properties.getConsumer().getConcurrency());
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
+        interceptor.ifAvailable(f::setRecordInterceptor);
 
-        processedEventRepositoryProvider.ifAvailable(repo ->
-                factory.setRecordInterceptor(new IdempotentRecordInterceptor(repo)));
-
-        return factory;
+        return f;
     }
 }
+

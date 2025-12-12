@@ -9,7 +9,7 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@KafkaListener(containerFactory = ConsumerAutoConfiguration.BEYND_LISTENER_CONTAINER_FACTORY_BEAN_NAME)
+@KafkaListener(containerFactory = ConsumerAutoConfiguration.LISTENER_FACTORY)
 public @interface BeyndEventListener {
 
     /**

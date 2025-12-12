@@ -7,13 +7,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "processed_event",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_processed_topic_partition_offset",
-                        columnNames = {"topic", "partition", "offset"})
-        }
-)
+@Table(name = "processed_event", uniqueConstraints = {
+                @UniqueConstraint(name = "uk_processed_topic_partition_offset", columnNames = { "topic", "partition",
+                                "offset_value" })
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,19 +18,19 @@ import java.util.UUID;
 @Builder
 public class ProcessedEvent {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.UUID)
+        private UUID id;
 
-    @Column(nullable = false)
-    private String topic;
+        @Column(nullable = false)
+        private String topic;
 
-    @Column(nullable = false)
-    private int partition;
+        @Column(nullable = false)
+        private int partition;
 
-    @Column(name = "offset_value", nullable = false)
-    private long offset;
+        @Column(name = "offset_value", nullable = false)
+        private long offset;
 
-    @Column(nullable = false)
-    private Instant processedAt;
+        @Column(nullable = false)
+        private Instant processedAt;
 }

@@ -107,4 +107,3 @@ public class DefaultKafkaStartupValidator implements KafkaStartupValidator {
         }
     }
 }
-

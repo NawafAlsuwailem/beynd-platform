@@ -1,18 +1,17 @@
 package com.beynd.platform.messaging.kafka.producer.config;
 
 import com.beynd.platform.messaging.kafka.common.config.KafkaProperties;
-import com.beynd.platform.messaging.kafka.producer.outbox.OutboxEventRepository;
-import com.beynd.platform.messaging.kafka.producer.outbox.OutboxRelay;
-import com.beynd.platform.messaging.kafka.producer.publisher.BeyndEventPublisher;
-import com.beynd.platform.messaging.kafka.producer.publisher.DefaultBeyndEventPublisher;
 import com.beynd.platform.messaging.kafka.common.serializer.AvroBinaryEventPayloadSerializer;
 import com.beynd.platform.messaging.kafka.common.serializer.EventPayloadSerializer;
 import com.beynd.platform.messaging.kafka.common.startup.StartupListener;
 import com.beynd.platform.messaging.kafka.common.startup.validation.DefaultKafkaStartupValidator;
 import com.beynd.platform.messaging.kafka.common.startup.validation.KafkaStartupValidator;
+import com.beynd.platform.messaging.kafka.producer.outbox.OutboxEventRepository;
+import com.beynd.platform.messaging.kafka.producer.outbox.OutboxRelay;
+import com.beynd.platform.messaging.kafka.producer.publisher.DefaultBeyndEventPublisher;
+import com.beynd.platform.messaging.kafka.producer.publisher.EventPublisher;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -41,8 +40,7 @@ public class ProducerAutoConfiguration {
     @Bean
     public KafkaStartupValidator kafkaStartupValidator(
             KafkaProperties properties,
-            @Autowired(required = false) DataSource dataSource
-    ) {
+            @Autowired(required = false) DataSource dataSource) {
         return new DefaultKafkaStartupValidator(properties, dataSource);
     }
 
@@ -78,10 +76,9 @@ public class ProducerAutoConfiguration {
     }
 
     @Bean
-    public BeyndEventPublisher eventPublisher(
+    public EventPublisher eventPublisher(
             OutboxEventRepository outboxEventRepository,
-            EventPayloadSerializer serializer
-    ) {
+            EventPayloadSerializer serializer) {
         return new DefaultBeyndEventPublisher(outboxEventRepository, serializer);
     }
 
@@ -89,8 +86,7 @@ public class ProducerAutoConfiguration {
     public OutboxRelay outboxRelay(
             OutboxEventRepository outboxEventRepository,
             KafkaTemplate<String, byte[]> kafkaTemplate,
-            KafkaProperties kafkaProperties
-    ) {
+            KafkaProperties kafkaProperties) {
         int batchSize = kafkaProperties.getProducer().getOutbox().getBatchSize();
         int maxAttempts = kafkaProperties.getProducer().getOutbox().getMaxAttempts();
         return new OutboxRelay(outboxEventRepository, kafkaTemplate, batchSize, maxAttempts);

@@ -10,39 +10,54 @@ import java.time.Instant;
 
 @Slf4j
 @RequiredArgsConstructor
-public class IdempotentRecordInterceptor implements RecordInterceptor<Object, Object> {
+public class IdempotentRecordInterceptor<K, V>
+        implements RecordInterceptor<K, V> {
 
-    private final ProcessedEventRepository processedEventRepository;
+        private final ProcessedEventRepository processedEventRepository;
 
-    @Override
-    public ConsumerRecord<Object, Object> intercept(ConsumerRecord<Object, Object> record,
-                                                    Consumer<Object, Object> consumer) {
-        boolean exists = processedEventRepository.existsByTopicAndPartitionAndOffset(
-                record.topic(), record.partition(), record.offset()
-        );
+        @Override
+        public ConsumerRecord<K, V> intercept(
+                ConsumerRecord<K, V> record,
+                Consumer<K, V> consumer) {
 
-        if (exists) {
-            log.debug("[Idempotency] Skipping already processed record {}-{}@{}",
-                    record.topic(), record.partition(), record.offset());
-            return null;
+                boolean exists = processedEventRepository.existsByTopicAndPartitionAndOffset(
+                        record.topic(),
+                        record.partition(),
+                        record.offset()
+                );
+
+                if (exists) {
+                        log.debug(
+                                "[Idempotency] Skipping already processed record {}-{}@{}",
+                                record.topic(),
+                                record.partition(),
+                                record.offset()
+                        );
+                        return null; // tells Spring Kafka to skip processing
+                }
+
+                return record;
         }
 
-        return record;
-    }
+        @Override
+        public void success(
+                ConsumerRecord<K, V> record,
+                Consumer<K, V> consumer) {
 
-    @Override
-    public void success(ConsumerRecord<Object, Object> record,
-                        Consumer<Object, Object> consumer) {
-        processedEventRepository.save(
-                ProcessedEvent.builder()
-                        .topic(record.topic())
-                        .partition(record.partition())
-                        .offset(record.offset())
-                        .processedAt(Instant.now())
-                        .build()
-        );
+                processedEventRepository.save(
+                        ProcessedEvent.builder()
+                                .topic(record.topic())
+                                .partition(record.partition())
+                                .offset(record.offset())
+                                .processedAt(Instant.now())
+                                .build()
+                );
 
-        log.debug("[Idempotency] Marked record as processed {}-{}@{}",
-                record.topic(), record.partition(), record.offset());
-    }
+                log.debug(
+                        "[Idempotency] Marked record as processed {}-{}@{}",
+                        record.topic(),
+                        record.partition(),
+                        record.offset()
+                );
+        }
 }
