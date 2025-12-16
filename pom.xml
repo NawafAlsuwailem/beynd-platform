@@ -18,7 +18,7 @@
     <description>Shared architecture platform library for Beynd microservices</description>
 
     <properties>
-        <revision>5.40.0-SNAPSHOT</revision>
+        <revision>5.70.0-SNAPSHOT</revision>
         <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
     </properties>
 
@@ -68,6 +68,17 @@
             <artifactId>kafka-avro-serializer</artifactId>
             <version>7.8.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-logging</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
