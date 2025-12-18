@@ -5,59 +5,52 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.listener.RecordInterceptor;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
 @Slf4j
 @RequiredArgsConstructor
-public class IdempotentRecordInterceptor<K, V>
-        implements RecordInterceptor<K, V> {
+public class IdempotentRecordInterceptor
+        implements RecordInterceptor<String, Object> {
 
-        private final ProcessedEventRepository processedEventRepository;
+    private final ProcessedEventRepository processedEventRepository;
 
-        @Override
-        public ConsumerRecord<K, V> intercept(
-                ConsumerRecord<K, V> record,
-                Consumer<K, V> consumer) {
+    @Override
+    public ConsumerRecord<String, Object> intercept(
+            ConsumerRecord<String, Object> record,
+            Consumer<String, Object> consumer) {
 
-                boolean exists = processedEventRepository.existsByTopicAndPartitionAndOffset(
-                        record.topic(),
-                        record.partition(),
-                        record.offset()
-                );
+        log.info("[Idempotency] Intercept topic={} partition={} offset={}", record.topic(), record.partition(), record.offset());
 
-                if (exists) {
-                        log.debug(
-                                "[Idempotency] Skipping already processed record {}-{}@{}",
-                                record.topic(),
-                                record.partition(),
-                                record.offset()
-                        );
-                        return null; // tells Spring Kafka to skip processing
-                }
+        if (processedEventRepository.existsByTopicAndPartitionAndOffset(
+                record.topic(),
+                record.partition(),
+                record.offset())) {
 
-                return record;
+            log.info("[Idempotency] Skipped duplicate topic={} partition={} offset={}", record.topic(), record.partition(), record.offset());
+            return null;
         }
 
-        @Override
-        public void success(
-                ConsumerRecord<K, V> record,
-                Consumer<K, V> consumer) {
+        return record;
+    }
 
-                processedEventRepository.save(
-                        ProcessedEvent.builder()
-                                .topic(record.topic())
-                                .partition(record.partition())
-                                .offset(record.offset())
-                                .processedAt(Instant.now())
-                                .build()
-                );
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void success(
+            ConsumerRecord<String, Object> record,
+            Consumer<String, Object> consumer) {
 
-                log.debug(
-                        "[Idempotency] Marked record as processed {}-{}@{}",
-                        record.topic(),
-                        record.partition(),
-                        record.offset()
-                );
-        }
+        processedEventRepository.save(
+                ProcessedEvent.builder()
+                        .topic(record.topic())
+                        .partition(record.partition())
+                        .offset(record.offset())
+                        .processedAt(Instant.now())
+                        .build()
+        );
+
+        log.info("[Idempotency] Persisted topic={} partition={} offset={}", record.topic(), record.partition(), record.offset());
+    }
 }

@@ -3,6 +3,7 @@ package com.beynd.platform.messaging.kafka.consumer.config;
 import com.beynd.platform.messaging.kafka.common.config.KafkaProperties;
 import com.beynd.platform.messaging.kafka.common.serializer.EventPayloadSerializer;
 import com.beynd.platform.messaging.kafka.consumer.idempotency.IdempotentRecordInterceptor;
+import com.beynd.platform.messaging.kafka.consumer.idempotency.ProcessedEventRepository;
 import com.beynd.platform.messaging.kafka.consumer.recovery.DeadLetterRecoverer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.listener.RecordInterceptor;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
 
 import java.util.HashMap;
@@ -100,12 +102,11 @@ public class ConsumerAutoConfiguration {
         return handler;
     }
 
-
     @Bean(name = LISTENER_FACTORY)
     public ConcurrentKafkaListenerContainerFactory<String, Object>
     kafkaListenerContainerFactory(ConsumerFactory<String, Object> cf,
                                   CommonErrorHandler errorHandler,
-                                  ObjectProvider<IdempotentRecordInterceptor> interceptor) {
+                                  ObjectProvider<RecordInterceptor<String, Object>> interceptor) {
 
         ConcurrentKafkaListenerContainerFactory<String, Object> f =
                 new ConcurrentKafkaListenerContainerFactory<>();
@@ -115,9 +116,21 @@ public class ConsumerAutoConfiguration {
         f.setConcurrency(properties.getConsumer().getConcurrency());
         f.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
 
-        interceptor.ifAvailable(f::setRecordInterceptor);
+        RecordInterceptor<String, Object> ri = interceptor.getIfAvailable();
+        if (ri != null) {
+            f.setRecordInterceptor(ri);
+            log.info("[BEYND KAFKA] Idempotency RecordInterceptor attached.");
+        } else {
+            log.warn("[BEYND KAFKA] Idempotency RecordInterceptor not found; processed_event will not be persisted.");
+        }
 
         return f;
+    }
+
+    @Bean
+    public RecordInterceptor<String, Object> idempotentRecordInterceptor(
+            ProcessedEventRepository repository) {
+        return new IdempotentRecordInterceptor(repository);
     }
 }
 
